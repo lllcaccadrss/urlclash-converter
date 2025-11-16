@@ -1,0 +1,13 @@
+{
+    "name": "subconverter-snippet",
+    "version": "1.0.0",
+    "private": true,
+    "author": {
+        "name": "wyf9",
+        "email": "wyf9@siiway.org",
+        "url": "https://github.com/wyf9"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0"
+    }
+}
