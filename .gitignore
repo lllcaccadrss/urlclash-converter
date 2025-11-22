@@ -3,3 +3,5 @@ node_modules/
 
 # Dist
 dist/
+converter.bundle.js
+converter.bundle.js.map

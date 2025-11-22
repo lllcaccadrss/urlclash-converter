@@ -33,7 +33,7 @@ jobs:
             --sourcemap \
             --outfile=dist/converter.bundle.js \
             --define:process.env.NODE_ENV=\"production\" \
-            --banner:js="// SPDX-License-Identifier: GPL-3.0-or-later\n// Build: ${{ github.sha }} @ $(date -u '+%Y-%m-%d %H:%M:%S UTC')\n// Repo: https://github.com/siiway/subconverter-snippet"
+            --banner:js="// SPDX-License-Identifier: GPL-3.0-or-later\\n// Build: ${{ github.sha }} @ $(date -u '+%Y-%m-%d %H:%M:%S UTC')\\n// Repo: https://github.com/siiway/subconverter-snippet"
 
       - id: inject_core
         name: Inject CORE_URL & Get Time

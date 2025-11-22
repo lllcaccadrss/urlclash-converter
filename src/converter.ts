@@ -11,32 +11,27 @@ export function linkToClash(
   links: string[],
   mode: ClashOutputMode = "proxies"
 ): ConvertResult {
-  const nodes = links
+  const nodeStrings = links
     .map((link) => {
       try {
         const node = parseUri(link.trim());
         return node ? generateClashNode(node) : null;
-      } catch (e: any) {
-        // 单个链接解析失败不中断整体
+      } catch {
         return null;
       }
     })
     .filter(Boolean);
 
-  if (nodes.length === 0) {
-    return {
-      success: false,
-      data: "# 无有效节点（请检查链接格式是否正确）",
-    };
+  if (nodeStrings.length === 0) {
+    return { success: false, data: "# 无有效节点（请检查链接格式是否正确）" };
   }
 
-  const key = mode === "payload" ? "payload" : mode === "none" ? "" : "proxies";
-  const prefix = key ? `${key}:\n` : "";
+  const content = nodeStrings.join("\n");
 
-  return {
-    success: true,
-    data: prefix + nodes.join("\n"),
-  };
+  if (mode === "payload")
+    return { success: true, data: `payload:\n${content}` };
+  if (mode === "none") return { success: true, data: content };
+  return { success: true, data: `proxies:\n${content}` };
 }
 
 // ====================== 反向：Clash → 链接 ======================
@@ -314,7 +309,7 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
     ...proxy,
     name: other_params.remarks
       ? decodeBase64OrOriginal(other_params.remarks).trim()
-      : proxy.server ?? "",
+      : (proxy.server ?? ""),
     "protocol-param": getIfNotBlank(
       decodeBase64OrOriginal(other_params.protoparam || "").replace(/\s/g, "")
     ),
@@ -1217,7 +1212,6 @@ function generateClashNode(node: any): string {
     port: node.port,
   };
 
-  // 自动复制所有有效字段
   const fieldsToCopy = [
     "uuid",
     "password",
@@ -1251,30 +1245,28 @@ function generateClashNode(node: any): string {
     }
   });
 
-  // sni → servername 兼容
   if (node.sni && !clashNode.servername) clashNode.servername = node.sni;
 
-  // 关键：深度清理所有空对象、空数组、空字符串
+  // 深度清理空对象、空数组
   const cleanEmpty = (obj: any): any => {
     if (obj === null || obj === undefined) return undefined;
     if (Array.isArray(obj)) {
-      const cleaned = obj
+      const arr = obj
         .map(cleanEmpty)
         .filter((v) => v !== undefined && v !== null);
-      return cleaned.length > 0 ? cleaned : undefined;
+      return arr.length > 0 ? arr : undefined;
     }
     if (typeof obj === "object") {
       const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        const cleanedValue = cleanEmpty(value);
+      for (const [k, v] of Object.entries(obj)) {
+        const cv = cleanEmpty(v);
         if (
-          cleanedValue !== undefined &&
-          cleanedValue !== null &&
-          cleanedValue !== "" &&
-          (typeof cleanedValue !== "object" ||
-            Object.keys(cleanedValue).length > 0)
+          cv !== undefined &&
+          cv !== null &&
+          cv !== "" &&
+          (typeof cv !== "object" || Object.keys(cv).length > 0)
         ) {
-          cleaned[key] = cleanedValue;
+          cleaned[k] = cv;
         }
       }
       return Object.keys(cleaned).length > 0 ? cleaned : undefined;
@@ -1282,14 +1274,13 @@ function generateClashNode(node: any): string {
     return obj;
   };
 
-  const cleanedNode = cleanEmpty(clashNode);
+  const cleaned = cleanEmpty(clashNode);
 
-  // 生成 YAML（使用 yaml 库的 indent: 2）
-  return genYaml(cleanedNode, { indent: 2 })
-    .trim()
-    .split("\n")
-    .map((line) => (line ? "  " + line : line))
-    .join("\n");
+  // 生成带 - 的完整节点字符串
+  const yamlLines = genYaml(cleaned, { indent: 2 }).trim().split("\n");
+  return (
+    "- " + yamlLines.map((line, i) => (i === 0 ? line : "  " + line)).join("\n")
+  );
 }
 
 // ====================== 生成原始链接（完整支持所有协议）=====================

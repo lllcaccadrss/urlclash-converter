@@ -18,6 +18,17 @@ Only for education and study use.
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
     }
   </style>
+
+  <!-- C 字 favicon（一行内置，无文件） -->
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='18' fill='%230D47A1'/><text x='32' y='41' font-family='Segoe UI,Arial,sans-serif' font-size='48' font-weight='900' fill='%23FFFFFF' text-anchor='middle' dominant-baseline='central'>C</text></svg>">
+
+  <!-- 兼容苹果设备 / Windows 磁贴 -->
+  <link rel="apple-touch-icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='18' fill='%230D47A1'/><text x='32' y='41' font-family='Segoe UI,Arial,sans-serif' font-size='48' font-weight='900' fill='%23FFFFFF' text-anchor='middle' dominant-baseline='central'>C</text></svg>">
+  <meta name="msapplication-TileColor" content="#0D47A1">
+  <meta name="msapplication-TileImage"
+    content="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='18' fill='%230D47A1'/><text x='32' y='41' font-family='Segoe UI,Arial,sans-serif' font-size='48' font-weight='900' fill='%23FFFFFF' text-anchor='middle' dominant-baseline='central'>C</text></svg>">
 </head>
 
 <body class="h-full bg-gray-50">
@@ -159,12 +170,25 @@ Only for education and study use.
     document.getElementById("paste-clash").onclick = () => paste(clashInput);
     document.getElementById("paste-links").onclick = () => paste(linksInput);
 
-    function showResult(text, title, isError = false) {
+    function showResult(text, title = "", isError = false) {
       resultText.textContent = text;
-      const titleElement = result.querySelector("div strong");
-      titleElement.textContent = title;
-      titleElement.className = isError ? "text-red-800 text-lg" : "text-green-800 text-lg";
-      result.className = isError ? "hidden mt-6 p-6 bg-red-50 border-2 border-red-300 rounded-lg" : "hidden mt-6 p-6 bg-green-50 border-2 border-green-300 rounded-lg";
+
+      const existingTitle = result.querySelector("h3");
+      if (existingTitle) {
+        existingTitle.textContent = title;
+        existingTitle.className = isError ? "text-red-800 font-bold" : "text-green-800 font-bold";
+      } else {
+        const lines = text.trim().split("\n");
+        const first = lines[0] || "";
+        if (!first.startsWith("# ") && title) {
+          resultText.textContent = `# ${title}\n${text}`;
+        }
+      }
+
+      result.className = isError
+        ? "mt-6 p-6 bg-red-50 border-2 border-red-300 rounded-lg"
+        : "mt-6 p-6 bg-green-50 border-2 border-green-300 rounded-lg";
+
       result.classList.remove("hidden");
       result.scrollIntoView({ behavior: "smooth" });
     }
