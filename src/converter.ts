@@ -3,8 +3,18 @@
 // GitHub: https://github.com/siiway/urlclash-converter
 // 本工具仅提供 URL 和 Clash Config 的配置文件格式转换，不存储任何信息，不提供任何代理服务，一切使用产生后果由使用者自行承担，SiiWay Team 及开发本工具的成员不负任何责任.
 
-import { parse as parseYaml, stringify as genYaml } from "yaml";
 import { punycodeDomain } from "./utils";
+import { parseJsYaml } from "./jsyaml";
+import { parsePyYaml } from "./pyyaml";
+import { dump as genYaml } from "js-yaml";
+
+export type ParserType = "js" | "py";
+
+let currentParser: ParserType = "js";
+
+export function setParser(type: ParserType) {
+  currentParser = type;
+}
 
 // ====================== 正向：链接 → Clash ======================
 export function linkToClash(
@@ -24,7 +34,10 @@ export function linkToClash(
     .filter(Boolean);
 
   if (nodeStrings.length === 0) {
-    return { success: false, data: "# 无有效节点 (请检查链接格式是否正确)\n# No vaild node (please check link format)" };
+    return {
+      success: false,
+      data: "# 无有效节点 (请检查链接格式是否正确)\n# No vaild node (please check link format)",
+    };
   }
 
   const content = nodeStrings.join("\n");
@@ -36,9 +49,23 @@ export function linkToClash(
 }
 
 // ====================== 反向：Clash → 链接 ======================
-export function clashToLink(yamlText: string): ConvertResult {
+export async function clashToLink(yamlText: string): Promise<ConvertResult> {
   try {
-    const config = parseYaml(yamlText);
+    yamlText = yamlText.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+
+    let config: any;
+
+    if (currentParser === "js") {
+      config = parseJsYaml(yamlText);
+      if (!config) {
+        return {
+          success: false,
+          data: "# js-yaml 解析失败，建议切换到 PyYAML 引擎\n# js-yaml failed, try PyYAML",
+        };
+      }
+    } else {
+      config = await parsePyYaml(yamlText);
+    }
 
     // 超级兼容：支持 9 种真实写法（覆盖 99.9% 用户）
     const candidates = [
@@ -86,7 +113,9 @@ export function clashToLink(yamlText: string): ConvertResult {
   } catch (e: any) {
     return {
       success: false,
-      data: `# YAML 解析失败: ${e.message || e}\n# YAML parse failed: ${e.message || e}`,
+      data: `# YAML 解析失败: ${e.message || e}\n# YAML parse failed: ${
+        e.message || e
+      }`,
     };
   }
 }
@@ -310,7 +339,7 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
     ...proxy,
     name: other_params.remarks
       ? decodeBase64OrOriginal(other_params.remarks).trim()
-      : (proxy.server ?? ""),
+      : proxy.server ?? "",
     "protocol-param": getIfNotBlank(
       decodeBase64OrOriginal(other_params.protoparam || "").replace(/\s/g, "")
     ),

@@ -12,6 +12,8 @@ import {
   Title1,
   Title3,
   Text,
+  Switch,
+  SwitchOnChangeData,
   Link,
   makeStyles,
   shorthands,
@@ -26,7 +28,7 @@ import {
   WeatherSunnyRegular,
   LocalLanguageRegular,
 } from '@fluentui/react-icons';
-import { linkToClash, clashToLink } from './converter';
+import { setParser, linkToClash, clashToLink } from './converter';
 
 const useStyles = makeStyles({
   container: {
@@ -117,6 +119,22 @@ const useStyles = makeStyles({
 });
 
 function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () => void }) {
+
+  const [usePyYaml, setUsePyYaml] = useState(false);
+  const [pyLoading, setPyLoading] = useState(false);
+
+  // 切换解析器
+  const toggleParser = async (checked: boolean) => {
+    setUsePyYaml(checked);
+    setParser(checked ? 'py' : 'js');
+
+    if (checked && clashInput.trim()) {
+      setPyLoading(true);
+      await clashToLink(clashInput); // 触发 Pyodide 预加载
+      setPyLoading(false);
+    }
+  };
+
   const styles = useStyles();
   const { t, i18n } = useTranslation();
   const [clashInput, setClashInput] = useState('');
@@ -161,12 +179,12 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
       buttonSetter(t('pasted'));
       setTimeout(() => buttonSetter(t('paste')), 800);  // Use t('paste') directly in timeout
     } catch (err) {
-      alert(t('paste-failed')); 
+      alert(t('paste-failed'));
     }
   };
 
-  const convertToLinks = () => {
-    const result = clashToLink(clashInput);
+  const convertToLinks = async () => {
+    const result = await clashToLink(clashInput);
     if (result.success) {
       setLinksInput(result.data);
     } else {
@@ -270,6 +288,72 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
               </Button>
             </div>
           </div>
+
+          {/* Engine Switcher */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: tokens.colorNeutralBackground3,
+              padding: '12px 16px',
+              borderRadius: tokens.borderRadiusMedium,
+              border: `1px solid ${tokens.colorNeutralStroke1}`,
+              marginBottom: '16px',
+              fontSize: '14px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* 状态小圆点 */}
+              <div
+                style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: usePyYaml ? '#16a34a' : '#71717a',
+                  boxShadow: usePyYaml ? '0 0 10px rgba(22,163,74,0.6)' : 'none',
+                  transition: 'all 0.3s ease',
+                  flexShrink: 0,
+                }}
+              />
+
+              {/* 文字说明 */}
+              <div>
+                <Text weight="semibold" block>
+                  {usePyYaml ? t('pyYamlEngine') : t('jsYamlEngine')}
+                </Text>
+                <Text size={200} style={{ opacity: 0.8 }}>
+                  {usePyYaml ? t('pyYamlDesc') : t('jsYamlDesc')}
+                  {pyLoading && <> · {t('switchingEngine')}</>}
+                </Text>
+              </div>
+            </div>
+
+            <Switch
+              checked={usePyYaml}
+              onChange={async (ev, data: SwitchOnChangeData) => {
+                const checked = data.checked;
+                setUsePyYaml(checked);
+                setParser(checked ? 'py' : 'js');
+
+                if (checked) {
+                  setPyLoading(true);
+                  try {
+                    // 触发 PyYAML 引擎预加载（用最小合法 YAML 防止空输入报错）
+                    await clashToLink(clashInput.trim() || 'proxies: []');
+                  } finally {
+                    setPyLoading(false);
+                  }
+                }
+              }}
+              label={
+                <Text weight="medium">
+                  {usePyYaml ? t('usingPyYaml') : t('usingJsYaml')}
+                </Text>
+              }
+            />
+          </div>
+
           <Textarea
             className={styles.textarea}
             value={linksInput}
